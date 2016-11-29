@@ -1,15 +1,15 @@
 from tensorflow.python.ops import rnn_cell
 from tensorflow.python.ops import seq2seq
-from collections import namedtuple
 import tensorflow as tf
 import numpy as np
 import sys
+import time
 
 
 class HParam():
     def __init__(self):
         self.batch_size = 32
-        self.n_epoch = 50
+        self.n_epoch = 100
         self.learning_rate = 0.01
         self.decay_steps = 1000
         self.decay_rate = 0.9
@@ -17,7 +17,7 @@ class HParam():
 
         self.state_size = 100
         self.num_layers = 3
-        self.seq_length = 10
+        self.seq_length = 20
         self.log_dir = './logs'
 
 
@@ -133,14 +133,12 @@ def sample(data, model, num=400):
         saver.restore(sess, ckpt)
 
         # initial phrase to warm RNN
-        prime = u'如果离开请不要伤害'
-
+        prime = u'你要离开我知道很简单'
         state = sess.run(model.cell.zero_state(1, tf.float32))
 
         for word in prime[:-1]:
             x = np.zeros((1,1))
             x[0,0] = data.char2id(word)
-            print(word, x[0,0])
             feed = {model.input_data: x, model.initial_state: state}
             state = sess.run(model.last_state, feed)
 
@@ -153,6 +151,9 @@ def sample(data, model, num=400):
             probs, state = sess.run([model.probs, model.last_state], feed_dict)
             p = probs[0]
             word = data.id2char(np.argmax(p))
+            print(word, end='')
+            sys.stdout.flush()
+            time.sleep(0.05)
             lyrics += word
         return lyrics
 
@@ -165,10 +166,10 @@ def main(infer):
     model = Model(args, data, infer=infer)
 
     if infer:
-        print(sample(data, model))
+        sample(data, model, 1000)
     else:
         with tf.Session() as sess:
-            sess.run(tf.initialize_all_variables())
+            sess.run(tf.global_variables_initializer())
             saver = tf.train.Saver()
             writer = tf.train.SummaryWriter(args.log_dir, sess.graph)
   
