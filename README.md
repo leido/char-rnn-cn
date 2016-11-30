@@ -2,6 +2,10 @@
 基于char-rnn和tensorflow生成周杰伦歌词
 这里是博客地址 http://leix.me/2016/11/28/tensorflow-lyrics-generation/
 
+embedding visualization( TensorFlow Version > 0.12.0rc0 ) :
+
+![embedding](./embedding.png)
+
 下面是用`你要离开我知道很简单`当做初始化来预热LSTM模型，然后生成的歌词：
 ```
 我用铅尾 连成来一遍
