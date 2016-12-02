@@ -2,6 +2,13 @@
 基于char-rnn和tensorflow生成周杰伦歌词
 这里是博客地址 http://leix.me/2016/11/28/tensorflow-lyrics-generation/
 
+## 训练
+`python3 gen_lyrics.py 0`
+
+## 预测（生成歌词）
+`python3 gen_lyrics.py 1`
+
+## 可视化
 在当前目录下运行`tensorboard --logdir=logs`可以可视化：
 
 embedding visualization( TensorFlow Version > 0.12.0rc0 ) :
