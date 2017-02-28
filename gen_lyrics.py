@@ -5,7 +5,8 @@ import time
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.tensorboard.plugins import projector
-from tensorflow.python.ops import rnn_cell, seq2seq
+from tensorflow.contrib.rnn import core_rnn_cell as rnn_cell
+from tensorflow.contrib import legacy_seq2seq as seq2seq
 
 
 class HParam():
@@ -55,11 +56,11 @@ class DataGenerator():
         return self.id2char_dict[id]
 
     def save_metadata(self, file):
-        with open(file, 'w') as f:
-            f.write('id\tchar\n')
+        with open(file, 'w',encoding='utf-8') as f:
+            f.write(u'id\tchar\n')
             for i in range(self.vocab_size):
                 c = self.id2char(i)
-                f.write('{}\t{}\n'.format(i, c))
+                f.write(u'{}\t{}\n'.format(i, c))
 
     def next_batch(self):
         x_batches = []
@@ -124,28 +125,28 @@ class Model():
                                                     [targets],
                                                     [tf.ones_like(targets, dtype=tf.float32)])
             self.cost = tf.reduce_sum(loss) / args.batch_size
-            tf.scalar_summary('loss', self.cost)
+            tf.summary.scalar('loss', self.cost)
 
         with tf.name_scope('optimize'):
             self.lr = tf.placeholder(tf.float32, [])
-            tf.scalar_summary('learning_rate', self.lr)
+            tf.summary.scalar('learning_rate', self.lr)
 
             optimizer = tf.train.AdamOptimizer(self.lr)
             tvars = tf.trainable_variables()
             grads = tf.gradients(self.cost, tvars)
             for g in grads:
-                tf.histogram_summary(g.name, g)
+                tf.summary.histogram(g.name, g)
             grads, _ = tf.clip_by_global_norm(grads, args.grad_clip)
 
             self.train_op = optimizer.apply_gradients(zip(grads, tvars))
-            self.merged_op = tf.merge_all_summaries()
+            self.merged_op = tf.summary.merge_all()
 
 
 def train(data, model, args):
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver()
-        writer = tf.train.SummaryWriter(args.log_dir, sess.graph)
+        writer = tf.summary.FileWriter(args.log_dir, sess.graph)
 
         # Add embedding tensorboard visualization. Need tensorflow version
         # >= 0.12.0RC0
@@ -207,7 +208,16 @@ def sample(data, model, args):
             lyrics += word
         return lyrics
 
+''' quick and dirty test
+if __name__ == '__main__':
+    infer = 0   # 0 - train; 1 - predict
+    args = HParam()
+    data = DataGenerator('JayLyrics.txt', args)
+    model = Model(args, data, infer)
 
+    run_fn = sample if infer else train
+    run_fn(data, model, args)
+'''
 def main(infer):
 
     args = HParam()
@@ -222,7 +232,7 @@ def main(infer):
 if __name__ == '__main__':
     msg = """
     Usage:
-    Training: 
+    Training:
         python3 gen_lyrics.py 0
     Sampling:
         python3 gen_lyrics.py 1
