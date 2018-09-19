@@ -1,10 +1,10 @@
-import os
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import sys
 import time
-
 import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.tensorboard.plugins import projector
 from tensorflow.contrib.rnn import core_rnn_cell as rnn_cell
 from tensorflow.contrib import legacy_seq2seq as seq2seq
 
@@ -56,11 +56,11 @@ class DataGenerator():
         return self.id2char_dict[id]
 
     def save_metadata(self, file):
-        with open(file, 'w') as f:
-            f.write('id\tchar\n')
+        with open(file, 'w',encoding='utf-8') as f:
+            f.write(u'id\tchar\n')
             for i in range(self.vocab_size):
                 c = self.id2char(i)
-                f.write('{}\t{}\n'.format(i, c))
+                f.write(u'{}\t{}\n'.format(i, c))
 
     def next_batch(self):
         x_batches = []
@@ -87,10 +87,9 @@ class Model():
     The core recurrent neural network model.
     """
 
-    def __init__(self, args, data, infer=False):
-        if infer:
-            args.batch_size = 1
-            args.seq_length = 1
+    def __init__(self, args, data):
+        args.batch_size = 1
+        args.seq_length = 1
         with tf.name_scope('inputs'):
             self.input_data = tf.placeholder(
                 tf.int32, [args.batch_size, args.seq_length])
@@ -142,49 +141,13 @@ class Model():
             self.merged_op = tf.summary.merge_all()
 
 
-def train(data, model, args):
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        saver = tf.train.Saver()
-        writer = tf.summary.FileWriter(args.log_dir, sess.graph)
-
-        # Add embedding tensorboard visualization. Need tensorflow version
-        # >= 0.12.0RC0
-        config = projector.ProjectorConfig()
-        embed = config.embeddings.add()
-        embed.tensor_name = 'rnnlm/embedding:0'
-        embed.metadata_path = args.metadata
-        projector.visualize_embeddings(writer, config)
-
-        max_iter = args.n_epoch * \
-            (data.total_len // args.seq_length) // args.batch_size
-        for i in range(max_iter):
-            learning_rate = args.learning_rate * \
-                (args.decay_rate ** (i // args.decay_steps))
-            x_batch, y_batch = data.next_batch()
-            feed_dict = {model.input_data: x_batch,
-                         model.target_data: y_batch, model.lr: learning_rate}
-            train_loss, summary, _, _ = sess.run([model.cost, model.merged_op, model.last_state, model.train_op],
-                                                 feed_dict)
-
-            if i % 10 == 0:
-                writer.add_summary(summary, global_step=i)
-                print('Step:{}/{}, training_loss:{:4f}'.format(i,
-                                                               max_iter, train_loss))
-            if i % 2000 == 0 or (i + 1) == max_iter:
-                saver.save(sess, os.path.join(
-                    args.log_dir, 'lyrics_model.ckpt'), global_step=i)
-
-
-def sample(data, model, args):
+def generate(prime, data, model, args):
     saver = tf.train.Saver()
     with tf.Session() as sess:
         ckpt = tf.train.latest_checkpoint(args.log_dir)
         print(ckpt)
         saver.restore(sess, ckpt)
 
-        # initial phrase to warm RNN
-        prime = u'你要离开我知道很简单'
         state = sess.run(model.cell.zero_state(1, tf.float32))
 
         for word in prime[:-1]:
@@ -209,29 +172,11 @@ def sample(data, model, args):
         return lyrics
 
 
-def main(infer):
-
+# quick and dirty test
+if __name__ == '__main__':
     args = HParam()
     data = DataGenerator('JayLyrics.txt', args)
-    model = Model(args, data, infer=infer)
+    model = Model(args, data)
 
-    run_fn = sample if infer else train
-
-    run_fn(data, model, args)
-
-
-if __name__ == '__main__':
-    msg = """
-    Usage:
-    Training: 
-        python3 gen_lyrics.py 0
-    Sampling:
-        python3 gen_lyrics.py 1
-    """
-    if len(sys.argv) == 2:
-        infer = int(sys.argv[-1])
-        print('--Sampling--' if infer else '--Training--')
-        main(infer)
-    else:
-        print(msg)
-        sys.exit(1)
+    prime = u'你要离开我知道很简单'
+    generate(prime, data, model, args)

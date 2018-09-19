@@ -1,12 +1,13 @@
 # char-rnn-cn
 基于char-rnn和tensorflow生成周杰伦歌词
 这里是博客地址 http://leix.me/2016/11/28/tensorflow-lyrics-generation/
+增加红楼梦口吻文章。
 
 ## 训练
-`python3 gen_lyrics.py 0`
+`python3 train_text.py`
 
-## 预测（生成歌词）
-`python3 gen_lyrics.py 1`
+## 预测（生成文字）
+`python3 generate_text.py`
 
 ## 可视化
 在当前目录下运行`tensorboard --logdir=logs`可以可视化：
